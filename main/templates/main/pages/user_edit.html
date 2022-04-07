@@ -5,6 +5,9 @@
 {% block content %}
 <form method="post" enctype="multipart/form-data">
   {% csrf_token %}
+  <!--соблюдая логику выводим названия полей(label) и сами поля
+  в шаблон передается всего один объект form и уже из него мы берем значения отдельных моделей
+  для полей с датами вручную прописываем текущее значение, т.к. в бд оно сохраняется в другом формате-->
   <p>{{ form.user.fullname.label }}: {{ form.user.fullname }}</p>
   <p>{{ form.user.bdate.label }}: <input type="date" name="user-bdate" id="id_user-bdate" value="{{ curr.bdate }}"></p>
   <p>{{ form.user.document.label }}: {{ form.user.document }}</p>
@@ -17,7 +20,7 @@
   <p>{{ form.user.rank.label }}: {{ form.user.rank }}</p>
   <p>{{ form.post.value.label }}: {{ form.post.value }}</p>
   <p>{{ form.post.rtp.label }}: {{ form.post.rtp }}</p>
-  {% if user.post.rtp %}
+  {% if curr.post.rtp %}
   <p>{{ form.post.passdate.label }}: <input type="date" name="post-passdate" id="id_post-passdate" value="{{ curr.post.passdate }}"></p> {% endif %}
   <p>{{ form.passedapprovals.result.label }}: {{ form.passedapprovals.result }}</p>
   {% if not curr.approvals.result %}
@@ -26,6 +29,8 @@
   <p>{{ form.passedapprovals.attdate.label }}: <input type="date" name="passedapprovals-attdate" id="id_passedapprovals-attdate" value="{{ curr.approvals.attdate }}"></p>
   <p>{{ form.passedapprovals.profdate.label }}: <input type="date" name="passedapprovals-profdate" id="id_passedapprovals-profdate" value="{{ curr.approvals.profdate }}"></p>
   <p>{{ form.passedapprovals.approvalsname.label }}: {{ form.passedapprovals.approvalsname }}</p>{% endif %}
+  <!--Для сохранения формы необходимо заполнение всех полей, поэтому заполняем скрытые поля id моделей объектом изменяемого пользователя, 
+    который передается в контексте в переменную curr. Id нужен для связи отображаемых форм и реальных моделей, иначе будут создаваться новые объекты-->
   <input type="hidden" value='{{ curr.post }}' name="user-post_id" id="id_user-post_id">
   <input type="hidden" value="{{ curr.id }}" name="gdzs-fullname" required="" id="id_gdzs-fullname">
   <input type="hidden" value="{{ curr.id }}" name="passedapprovals-fullname" required="" id="id_passedapprovals-fullname">

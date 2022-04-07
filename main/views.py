@@ -21,33 +21,12 @@ from django.contrib.auth import (
 from django.contrib.sites.shortcuts import get_current_site
 from django.conf import settings
 from django.shortcuts import resolve_url
-from shapeshifter.views import MultiModelFormView
-from shapeshifter.mixins import MultiSuccessMessageMixin
 
 @login_required
 def main_page(request):
     users = CustomUser.objects.all()
     return render(request, "main/pages/main.html", {'users':users})
 
-
-class UserUpdateView(MultiSuccessMessageMixin, MultiModelFormView):
-    form_classes = (UserEditForm, GDZSEditForm)
-    template_name = 'main/pages/user_edit.html'
-    success_url = reverse_lazy('profile')
-    success_message = 'Your profile has been updated.'
-
-    def get_instances(self):
-        instances = {
-            'userform': self.request.user,
-            'gdzsform': GDZS.objects.filter(fullname=self.request.user.id),
-        }
-
-        return instances
-    
-    def get_context_data(self, **kwargs):
-        context=super().get_context_data(**kwargs)
-        context['curr'] = CustomUser.objects.get(pk=self.kwargs.get('pk'))
-        return context
 
 class SignUpView(CreateView):
     form_class = SignUpForm
@@ -64,7 +43,7 @@ class SuccessURLAllowedHostsMixin:
 
 class LoginView(SuccessURLAllowedHostsMixin, FormView):
     """
-    Display the login form and handle the login action.
+    Отображает форму логина и производит процедуру входа.
     """
     authentication_form = AuthenticationForm
     next_page = 'main'
@@ -76,7 +55,7 @@ class LoginView(SuccessURLAllowedHostsMixin, FormView):
     @method_decorator(sensitive_post_parameters())
     @method_decorator(csrf_protect)
     @method_decorator(never_cache)
-    def dispatch(self, request, *args, **kwargs):
+    def dispatch(self, request, *args, **kwargs): # функция обрабатывает ошибку циклической переадресации
         if self.redirect_authenticated_user and self.request.user.is_authenticated:
             redirect_to = self.get_success_url()
             if redirect_to == self.request.path:
@@ -87,11 +66,11 @@ class LoginView(SuccessURLAllowedHostsMixin, FormView):
             return HttpResponseRedirect(redirect_to)
         return super().dispatch(request, *args, **kwargs)
 
-    def get_success_url(self):
+    def get_success_url(self): #функция возвращает адрес, который открывается после успешного заполнения формы
         return self.get_redirect_url() or self.get_default_redirect_url()
 
-    def get_redirect_url(self):
-        """Return the user-originating redirect URL if it's safe."""
+    def get_redirect_url(self): 
+        """Возвращает установленный пользователем адрес"""
         redirect_to = self.request.POST.get(
             self.redirect_field_name,
             self.request.GET.get(self.redirect_field_name, '')
@@ -104,23 +83,25 @@ class LoginView(SuccessURLAllowedHostsMixin, FormView):
         return redirect_to if url_is_safe else ''
 
     def get_default_redirect_url(self):
-        """Return the default redirect URL."""
+        """Возвращает адрес установленный в переменной next_page выше или LOGIN_REDIRECT_URL в настройках"""
         return resolve_url(self.next_page or settings.LOGIN_REDIRECT_URL)
 
     def get_form_class(self):
         return self.authentication_form or self.form_class
 
     def get_form_kwargs(self):
+        """Возвращает введенные в форму данные"""
         kwargs = super().get_form_kwargs()
         kwargs['request'] = self.request
         return kwargs
 
     def form_valid(self, form):
-        """Security check complete. Log the user in."""
+        """Проверка формы на валидность и переадресация"""
         auth_login(self.request, form.get_user())
         return HttpResponseRedirect(self.get_success_url())
 
     def get_context_data(self, **kwargs):
+        """Обновляет словарь контекстных данных"""
         context = super().get_context_data(**kwargs)
         current_site = get_current_site(self.request)
         context.update({
@@ -133,6 +114,7 @@ class LoginView(SuccessURLAllowedHostsMixin, FormView):
 
 
 class UserEditView(UpdateView):
+    """Страница изменения данных пользователя"""
     model = CustomUser
     success_url = '/'
     template_name = 'main/pages/user_edit.html'
@@ -140,6 +122,7 @@ class UserEditView(UpdateView):
 
 
     def get_form_kwargs(self):
+        """Устанавливаем значения для инициализации формы"""
         kwargs = super(UserEditView, self).get_form_kwargs()
         kwargs.update(instance={
             'user': self.object,
@@ -151,16 +134,18 @@ class UserEditView(UpdateView):
         return kwargs
 
     def get_context_data(self, **kwargs):
+        """Добавляем в контекст объект текущего пользователя"""
         context=super().get_context_data(**kwargs)
         context['curr'] = CustomUser.objects.get(pk=self.kwargs.get('pk'))
         return context
 
 
 class ProfileView(DetailView):
+    """Отображение профиля"""
     model = CustomUser
     template_name = 'main/pages/profile.html'
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
-        context['user'] = CustomUser.objects.get(pk=self.kwargs.get('pk'))
+        context['user'] = CustomUser.objects.get(pk=self.kwargs.get('pk')) # добавляем к контексту объект запрошенного пользователя
         return context
